@@ -53,7 +53,7 @@ func NewRouter(defSvc service.Definition) (*mux.Router, error) {
 
 	r := mux.NewRouter()
 	for _, e := range endpoints {
-		r.Handle(e.Path, wrap(e.Name, e.Handler))
+		r.Handle(e.Path, wrap(e.Name, e.Handler)).Methods(e.Method)
 	}
 
 	return r, nil
@@ -84,11 +84,10 @@ func wrap(endpoint string, handler handlerFunc) http.Handler {
 		defer observeAPILatency(endpoint)()
 
 		ctx := r.Context()
-		ctx = log.WithTopic(ctx, "vapi")
-		ctx = log.WithCtx(ctx, z.Str("vapi_endpoint", endpoint))
+		ctx = log.WithTopic(ctx, "router")
+		ctx = log.WithCtx(ctx, z.Str("endpoint", endpoint))
 		ctx = withCtxDuration(ctx)
 
-		// TODO(corver): Add support for octet-stream (SSZ).
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "" && !strings.Contains(contentType, "application/json") {
 			writeError(ctx, w, endpoint, apiError{
